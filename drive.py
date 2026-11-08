@@ -29,10 +29,10 @@ class DrivingCNN(nn.Module):
 
         self.relu = nn.ReLU()
 
-        self.fc1 = nn.Linear(12672, 100)
+        self.fc1 = nn.Linear(10560, 100)
         self.fc2 = nn.Linear(100, 50)
         self.fc3 = nn.Linear(50, 10)
-        self.fc4 = nn.Linear(10, 1)
+        self.fc4 = nn.Linear(10, 2)
 
     def forward(self, x):
 
@@ -83,7 +83,7 @@ def preprocess(image):
 
     # Your training images were 320 x 160.
     # Remove top 55 pixels exactly like during training.
-    image = image.crop((0, 55, image.width, image.height))
+    image = image.crop((0, 65, image.width, image.height))
 
     image = np.array(image).astype(np.float32)
 
@@ -164,28 +164,19 @@ def telemetry(sid, data):
     # --------------------------------------------------------
 
     with torch.no_grad():
+        prediction = model(image_tensor)[0]
 
-        steering = model(image_tensor).item()
+    steering = prediction[0].item()
+    throttle = prediction[1].item()
 
+    # Keep predictions within simulator control limits
+    steering = max(-1.0, min(1.0, steering))
+    throttle = max(0.0, min(1.0, throttle))
+
+    print(f"Steering: {steering:.3f}, Throttle: {throttle:.3f}")
     # --------------------------------------------------------
     # Throttle
     # --------------------------------------------------------
-
-    speed = float(data["speed"])
-
-    target_speed = 15.0
-
-    if speed < target_speed:
-        throttle = 1
-    else:
-        throttle = 0.0
-
-    print(
-        f"Speed: {speed:5.2f} | "
-        f"Steering: {steering:+.4f} | "
-        f"Throttle: {throttle:.2f}"
-    )
-
     # --------------------------------------------------------
     # Send controls to simulator
     # --------------------------------------------------------
